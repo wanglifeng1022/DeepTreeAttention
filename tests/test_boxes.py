@@ -76,3 +76,10 @@ def test_id_train(created_records):
     basename = os.path.splitext(os.path.basename(test_predictions))[0]
     shp["box_index"] = ["{}_{}".format(basename, x) for x in shp.index.values]
     assert all([x.decode() in shp.box_index.values for x in ids.numpy()])
+    
+def test_ensemble(created_records):    
+    dataset = boxes.ensemble_dataset(created_records, batch_size=2)
+    for data, label_batch in dataset.take(1):
+        assert len(data)  == 5
+        assert data[0].shape == (2,20,20,3)    
+        assert label_batch.shape == (2,6)        

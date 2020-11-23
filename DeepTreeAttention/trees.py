@@ -332,7 +332,44 @@ class AttentionModel():
         #Manually override batch size
         self.classes = pd.read_csv(self.classes_file).shape[0] 
         
-        self.read_data(HSI = True, RGB = True, metadata = True)      
+        #self.read_data(HSI = True, RGB = True, metadata = True)      
+        self.train_split = boxes.ensemble_dataset(
+            tfrecords=self.train_split_records,
+            batch_size=self.config["train"]["batch_size"],
+            shuffle=self.config["train"]["shuffle"],
+            RGB=RGB,
+            HSI=HSI,
+            metadata=metadata,
+            labels=labels,
+            ids=ids,
+            submodel=submodel,
+            cores=self.config["cpu_workers"])
+        
+        self.val_split = boxes.ensemble_dataset(
+            tfrecords=self.test_records,
+            batch_size=self.config["train"]["batch_size"],                    
+            shuffle=False,
+            RGB=RGB,
+            HSI=HSI,
+            metadata=metadata,
+            labels=labels,
+            ids=ids,
+            augmentation=False,                    
+            submodel=submodel,                    
+            cores=self.config["cpu_workers"])  
+        
+        self.val_split_with_ids = boxes.ensemble_dataset(
+            tfrecords=self.test_records,
+            batch_size=self.config["train"]["batch_size"],                    
+            shuffle=False,
+            RGB=RGB,
+            HSI=HSI,
+            metadata=metadata,
+            labels=labels,
+            ids=True,
+            augmentation=False,
+            submodel=submodel,                    
+            cores=self.config["cpu_workers"])       
         
         if self.val_split is None:
             print("Cannot run callbacks without validation data, skipping...")
