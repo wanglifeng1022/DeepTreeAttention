@@ -333,7 +333,7 @@ class AttentionModel():
         
         self.read_data(HSI = True, RGB = True, metadata = True)      
         self.train_split = boxes.ensemble_dataset(
-            tfrecords=self.train_split_records,
+            tfrecords=self.train_records,
             batch_size=self.config["train"]["batch_size"],
             shuffle=self.config["train"]["shuffle"],
             RGB=RGB,
