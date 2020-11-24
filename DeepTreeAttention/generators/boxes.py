@@ -318,7 +318,53 @@ def _box_index_parse_(tfrecord):
     example = tf.io.parse_single_example(tfrecord, features)
     
     return example["box_index"]
+
+def _parse_(tfrecord):
+    features = {
+        "classes": tf.io.FixedLenFeature([], tf.int64),
+        "label": tf.io.FixedLenFeature([], tf.int64),
+        "site": tf.io.FixedLenFeature([], tf.int64),  
+        "number_of_sites": tf.io.FixedLenFeature([], tf.int64),  
+        "height": tf.io.FixedLenFeature([], tf.float32),     
+        "elevation": tf.io.FixedLenFeature([], tf.float32),        
+    }
     
+    features['HSI_image/data'] = tf.io.FixedLenFeature([20*20*369], tf.float32)        
+    features["HSI_image/height"] =  tf.io.FixedLenFeature([], tf.int64)
+    features["HSI_image/width"] = tf.io.FixedLenFeature([], tf.int64)
+    features["HSI_image/depth"] = tf.io.FixedLenFeature([], tf.int64)
+    
+    features['RGB_image/data'] = tf.io.FixedLenFeature([100*100*3], tf.float32)        
+    features["RGB_image/height"] =  tf.io.FixedLenFeature([], tf.int64)
+    features["RGB_image/width"] = tf.io.FixedLenFeature([], tf.int64)
+    features["RGB_image/depth"] = tf.io.FixedLenFeature([], tf.int64)             
+    
+    example = tf.io.parse_single_example(tfrecord, features)
+    classes = tf.cast(example['classes'], tf.int32)    
+    one_hot_labels = tf.one_hot(example['label'], classes)
+    
+    # Load HSI image from file
+    HSI_image_shape = tf.stack([example['HSI_image/height'],example['HSI_image/width'], example['HSI_image/depth']])
+    
+    # Reshape to known shape
+    loaded_HSI_image = tf.reshape(example['HSI_image/data'], HSI_image_shape, name="cast_loaded_HSI_image")
+    
+    # Load RGB image from file
+    RGB_image_shape = tf.stack([example['RGB_image/height'],example['RGB_image/width'], example['RGB_image/depth']])
+    
+    # Reshape to known shape
+    loaded_RGB_image = tf.reshape(example['RGB_image/data'], RGB_image_shape, name="cast_loaded_RGB_image")
+        
+    site = example['site']
+    sites = tf.cast(example['number_of_sites'], tf.int32)    
+    
+    #one hot
+    one_hot_sites = tf.one_hot(site, sites)
+    
+    
+    return (loaded_HSI_image, loaded_RGB_image, example['height'], example['elevation'], one_hot_sites), one_hot_labels
+
+
 def _HSI_parse_(tfrecord):
     features = {}
     
@@ -470,7 +516,6 @@ def tf_dataset(tfrecords,
             
     if HSI:
         HSI_dataset = dataset.map(_HSI_parse_, num_parallel_calls=cores) 
-        #HSI_dataset = HSI_dataset.map(normalize, num_parallel_calls=cores)      
         if augmentation:
             HSI_dataset = HSI_dataset.map(augment, num_parallel_calls=cores)   
                 
@@ -517,3 +562,38 @@ def tf_dataset(tfrecords,
     zipped_dataset = zipped_dataset.prefetch(buffer_size=1)    
     
     return zipped_dataset
+
+def ensemble_dataset(tfrecords,
+                     batch_size=2,
+               shuffle=True,
+               RGB=True,
+               HSI=True,
+               labels=True,
+               ids = False,
+               metadata=True,
+               submodel=False,
+               augmentation = True,
+               cores=10):
+    """Create a tf.data dataset that yields sensor data and ground truth
+    Args:
+        tfrecords: path to tfrecords, see generate.py
+        RGB: Include RGB data
+        HSI: Include HSI data
+        ids: include box ids
+        metadata: include metadata 
+        labels: training record labels
+        submodel: Logical. "spectral" or "spatial submodels" have three label inputs
+        cache: cache dataset for faster reading. Dataset must be fairly small.
+    Returns:
+        dataset: a tf.data dataset yielding crops and labels for train: True, crops and raster indices for train: False
+        """
+
+    dataset = tf.data.TFRecordDataset(tfrecords, num_parallel_reads=32)   
+    dataset = dataset.map(_parse_, num_parallel_calls=32)         
+
+    #batch and shuffle
+    dataset = dataset.shuffle(buffer_size=10)   
+    dataset = dataset.batch(batch_size=batch_size)    
+    dataset = dataset.prefetch(buffer_size=1)    
+
+    return dataset

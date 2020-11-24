@@ -422,6 +422,7 @@ class AttentionModel():
                     optimizer=tf.keras.optimizers.Adam(
                     lr=float(self.config["train"]["learning_rate"])),
                     metrics=[tf.keras.metrics.CategoricalAccuracy(
+                        
                                                                  name='acc')])            
                         
                 #Train ensemble layer
