@@ -361,14 +361,14 @@ class AttentionModel():
             tfrecords=self.test_records,
             batch_size=self.config["train"]["batch_size"],                    
             shuffle=False,
-            RGB=RGB,
-            HSI=HSI,
-            metadata=metadata,
-            labels=labels,
+            RGB=True,
+            HSI=True,
+            metadata=True,
+            labels=False,
             ids=True,
-            augmentation=False,
-            submodel=submodel,                    
-            cores=self.config["cpu_workers"])       
+            augmentation=False,                    
+            submodel=False,                    
+            cores=self.config["cpu_workers"])        
         
         if self.val_split is None:
             print("Cannot run callbacks without validation data, skipping...")
