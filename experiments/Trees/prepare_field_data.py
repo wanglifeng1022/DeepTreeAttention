@@ -7,11 +7,12 @@ import geopandas as gpd
 import rasterio
 import random
 import numpy as np
+import math
 import shapely
 import pandas as pd
 import traceback
-from matplotlib import pyplot
 
+from matplotlib import pyplot
 from DeepTreeAttention.generators.boxes import write_tfrecord
 from DeepTreeAttention.utils.paths import find_sensor_path, convert_h5
 from DeepTreeAttention.utils.config import parse_yaml
@@ -21,6 +22,16 @@ from distributed import wait
 from random import randint
 from time import sleep
 
+
+def normalize(image):
+    """normalize a 3d numoy array simiiar to tf.image.per_image_standardization"""
+    mean = image.mean()
+    stddev = image.std()
+    adjusted_stddev = max(stddev, 1.0/math.sqrt(image.size))
+    standardized_image = (image - mean) / adjusted_stddev
+    
+    return standardized_image
+    
 def resize(img, height, width):
     # resize image
     dim = (width, height)    
@@ -256,6 +267,9 @@ def create_records(HSI_crops, RGB_crops, labels, sites, heights, elevations, box
         resized_RGB_crops = [resize(x, RGB_size, RGB_size).astype(np.float32) for x in chunk_RGB_crops]
         resized_HSI_crops = [resize(x, HSI_size, HSI_size).astype(np.float32) for x in chunk_HSI_crops]
         
+        #Normalize HSI
+        resized_HSI_crops = [normalize(x) for x in resized_HSI_crops]
+        
         filename = "{}/field_data_{}.tfrecord".format(savedir, counter)
         write_tfrecord(filename=filename,
                                             HSI_images=resized_HSI_crops,
@@ -324,7 +338,7 @@ def main(
     site_classes_file,
     hyperspectral_dir,
     savedir=".", 
-    chunk_size=400,
+    chunk_size=200,
     extend_HSI_box=0, 
     extend_RGB_box=0,
     hyperspectral_savedir=".", 

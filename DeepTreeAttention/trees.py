@@ -329,7 +329,6 @@ class AttentionModel():
                         class_weight=class_weight)
         
     def ensemble(self, experiment, class_weight=None, freeze = True, train=True):
-        #Manually override batch size
         self.classes = pd.read_csv(self.classes_file).shape[0] 
         
         #self.read_data(HSI = True, RGB = True, metadata = True)      
@@ -394,6 +393,8 @@ class AttentionModel():
                                              label_names=label_names,
                                              train_shp=self.train_shp,    
                                              submodel="ensemble")
+            
+            print("callback list is {}".format(callback_list))
         
         if self.config["train"]["gpus"] > 1:
             with self.strategy.scope():        
