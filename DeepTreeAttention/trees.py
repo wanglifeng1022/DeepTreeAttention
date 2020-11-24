@@ -331,7 +331,7 @@ class AttentionModel():
     def ensemble(self, experiment, class_weight=None, freeze = True, train=True):
         self.classes = pd.read_csv(self.classes_file).shape[0] 
         
-        #self.read_data(HSI = True, RGB = True, metadata = True)      
+        self.read_data(HSI = True, RGB = True, metadata = True)      
         self.train_split = boxes.ensemble_dataset(
             tfrecords=self.train_split_records,
             batch_size=self.config["train"]["batch_size"],
