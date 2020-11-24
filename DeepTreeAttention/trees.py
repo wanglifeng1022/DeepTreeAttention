@@ -336,25 +336,25 @@ class AttentionModel():
             tfrecords=self.train_records,
             batch_size=self.config["train"]["batch_size"],
             shuffle=self.config["train"]["shuffle"],
-            RGB=RGB,
-            HSI=HSI,
-            metadata=metadata,
-            labels=labels,
-            ids=ids,
-            submodel=submodel,
+            RGB=True,
+            HSI=True,
+            metadata=True,
+            labels=True,
+            ids=False,
+            submodel=False,
             cores=self.config["cpu_workers"])
         
         self.val_split = boxes.ensemble_dataset(
             tfrecords=self.test_records,
             batch_size=self.config["train"]["batch_size"],                    
             shuffle=False,
-            RGB=RGB,
-            HSI=HSI,
-            metadata=metadata,
-            labels=labels,
-            ids=ids,
+            RGB=True,
+            HSI=True,
+            metadata=True,
+            labels=False,
+            ids=False,
             augmentation=False,                    
-            submodel=submodel,                    
+            submodel=False,                    
             cores=self.config["cpu_workers"])  
         
         self.val_split_with_ids = boxes.ensemble_dataset(
