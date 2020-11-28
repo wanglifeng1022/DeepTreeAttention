@@ -14,7 +14,7 @@ from tensorflow import expand_dims
 
 class F1Callback(Callback):
 
-    def __init__(self, experiment, eval_dataset, eval_dataset_with_index,  y_true, label_names, submodel, train_shp, n=6):
+    def __init__(self, experiment, eval_dataset,  y_true, label_names, submodel, train_shp, n=6):
         """F1 callback
         Args:
             n: number of epochs to run. If n=4, function will run every 4 epochs
@@ -27,7 +27,6 @@ class F1Callback(Callback):
         self.n = n
         self.train_shp = train_shp
         self.y_true = y_true
-        self.eval_dataset_with_index = eval_dataset_with_index
  
     def on_train_end(self, logs={}):
             
@@ -188,7 +187,6 @@ def create(experiment, train_data, validation_data, train_shp, validation_data_w
         train_data: a tf data object to generate data
         validation_data: a tf data object to generate data
         train_shp: the original shapefile for the train data to check site error
-        eval_dataset_with_index: a id_train dataset to allow to find the original record for each image
         """
     
     #turn off callbacks for metadata
@@ -213,7 +211,7 @@ def create(experiment, train_data, validation_data, train_shp, validation_data_w
         confusion_matrix = ConfusionMatrixCallback(experiment=experiment, y_true=y_true, dataset=validation_data, label_names=label_names, submodel=submodel)
         callback_list.append(confusion_matrix)
 
-    f1 = F1Callback(experiment=experiment, y_true=y_true, eval_dataset=validation_data, label_names=label_names, submodel=submodel, eval_dataset_with_index=validation_data_with_index, train_shp=train_shp)
+    f1 = F1Callback(experiment=experiment, y_true=y_true, eval_dataset=validation_data, label_names=label_names, submodel=submodel, train_shp=train_shp)
     callback_list.append(f1)
     
     #if submodel is None:
