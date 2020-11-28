@@ -1,5 +1,5 @@
 #### tf.data input pipeline ###
-import geopandas
+import geopandas as gpd
 import numpy as np
 import os
 import pandas as pd
@@ -8,7 +8,9 @@ import random
 import tensorflow as tf
 import cv2
 import math
+
 from rasterio.windows import from_bounds
+from shapely import wkt
 
 def image_normalize(image):
     """normalize a 3d numoy array simiiar to tf.image.per_image_standardization"""
@@ -69,7 +71,7 @@ def crop_image(src, box, expand=0):
     
     return masked_image
     
-def generate_tfrecords(shapefile,
+def generate_tfrecords(
                        HSI_sensor_path,
                        RGB_sensor_path,
                        site,
@@ -83,8 +85,12 @@ def generate_tfrecords(shapefile,
                        classes=20,
                        number_of_sites=23,
                        train=True,
-                       extend_box=0,
-                       shuffle=True):
+                       extend_HSI_box=0,
+                       extend_RGB_box=0,
+                       shuffle=True,
+                       shapefile=None,
+                       csv_file=None,
+                       label_column="label"):
     """Yield one instance of data with one hot labels
     Args:
         chunk_size: number of windows per tfrecord
@@ -97,15 +103,37 @@ def generate_tfrecords(shapefile,
         HSI_size: size in pixels of one side of image
         train: training mode to include yielded labels
         number_of_sites: total number of sites used for one-hot encoding
-        extend_box: units in meters to expand DeepForest bounding box to give crop more context
+        extend_HSI_box: units in meters to expand DeepForest bounding box to give crop more context
+        extend_RGB_box: units in meters to expand DeepForest bounding box to give crop more context
+
     Returns:
         filename: tfrecords path
     """
-    gdf = geopandas.read_file(shapefile)
-    basename = os.path.splitext(os.path.basename(shapefile))[0]
+    
+    if all([x is None for x in [csv_file, shapefile]]):
+        raise AttributeError("Either pass a shapefile=, or csv_file argument")
+    
     HSI_src = rasterio.open(HSI_sensor_path)
-    RGB_src = rasterio.open(HSI_sensor_path)
-
+    RGB_src = rasterio.open(RGB_sensor_path)
+    
+    #Read csv file
+    if shapefile is None:
+        basename = os.path.splitext(os.path.basename(csv_file))[0]        
+        gdf = pd.read_csv(csv_file)
+        gdf['geometry'] = gdf['geometry'].apply(wkt.loads)
+        gdf = gpd.GeoDataFrame(gdf)
+        #assign crs
+        gdf.crs = RGB_src.crs
+                
+    else:
+        basename = os.path.splitext(os.path.basename(shapefile))[0]        
+        gdf = gpd.read_file(shapefile)
+    
+    #Remove any nan and species not in the label dict if provided
+    gdf = gdf[~gdf[label_column].isnull()]
+    if species_label_dict is not None:
+        gdf = gdf[gdf[label_column].isin(list(species_label_dict.keys()))]
+    
     gdf["box_index"] = ["{}_{}".format(basename, x) for x in gdf.index.values]
     labels = []
     HSI_crops = []
@@ -115,10 +143,10 @@ def generate_tfrecords(shapefile,
     for index, row in gdf.iterrows():
         #Add training label, ignore unclassified 0 class
         if train:
-            labels.append(row["label"])
+            labels.append(row[label_column])
         try:
-            HSI_crop = crop_image(HSI_src, row["geometry"], extend_box)
-            RGB_crop = crop_image(RGB_src, row["geometry"], extend_box)
+            HSI_crop = crop_image(HSI_src, row["geometry"], extend_HSI_box)
+            RGB_crop = crop_image(RGB_src, row["geometry"], extend_RGB_box)
         except Exception as e:
             print("row {} failed with {}".format(index, e))
             continue
@@ -489,6 +517,7 @@ def tf_dataset(tfrecords,
                metadata=True,
                submodel=False,
                augmentation = True,
+               cache=False,
                cores=32):
     """Create a tf.data dataset that yields sensor data and ground truth
     Args:
@@ -508,8 +537,8 @@ def tf_dataset(tfrecords,
     
     dataset = tf.data.TFRecordDataset(tfrecords, num_parallel_reads=cores)   
     
-    if shuffle:
-        dataset = dataset.shuffle(10)      
+    #if shuffle:
+    #    dataset = dataset.shuffle(10)      
     
     if ids:
         ids_dataset = dataset.map(_box_index_parse_, num_parallel_calls=cores) 
@@ -559,6 +588,8 @@ def tf_dataset(tfrecords,
         zipped_dataset = zipped_dataset.shuffle(buffer_size=10)   
     
     zipped_dataset = zipped_dataset.batch(batch_size=batch_size)
+    if cache:
+        zipped_dataset = zipped_dataset.cache()
     zipped_dataset = zipped_dataset.prefetch(buffer_size=1)    
     
     return zipped_dataset

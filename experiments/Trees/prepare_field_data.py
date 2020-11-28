@@ -338,7 +338,7 @@ def main(
     site_classes_file,
     hyperspectral_dir,
     savedir=".", 
-    chunk_size=200,
+    chunk_size=100,
     extend_HSI_box=0, 
     extend_RGB_box=0,
     hyperspectral_savedir=".", 
@@ -500,6 +500,7 @@ if __name__ == "__main__":
     #create dask client
     client = start_cluster.start(cpus=config["cpu_workers"], mem_size="15GB")
     #client = None
+    
     #test data
     main(
         field_data=config["evaluation"]["ground_truth_path"],

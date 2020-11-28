@@ -61,15 +61,16 @@ class AttentionModel():
         except:
             self.train_shp = None
         
-    def generate(self, shapefile, HSI_sensor_path, RGB_sensor_path, elevation, heights, site, species_label_dict=None, train=True, chunk_size=1000):
+    def generate(self, HSI_sensor_path, RGB_sensor_path, elevation, heights, site, species_label_dict=None, train=True, chunk_size=1000, shapefile=None, csv_file=None,label_column="label"):
         """Predict species class for each DeepForest bounding box
             Args:
                 shapefile: a DeepForest shapefile (see NeonCrownMaps) with a bounding box and utm projection
                 train: generate a training record that yields, image, label, or a prediction record with metadata? Default True
-                site: site metadata label
+                site: site metadata label in numeric
                 height: list of heights in the shapefile
                 sensor_path: supply a known path to a sensor geoTIFF tile. 
                 chunk_size: number of crops per tfrecord
+                label_column: name of column to take taxonID labels
             """
         #set savedir
         if train:
@@ -79,6 +80,7 @@ class AttentionModel():
 
         self.classes = pd.read_csv(self.classes_file).shape[0]        
         created_records = boxes.generate_tfrecords(shapefile=shapefile,
+                                                   csv_file=csv_file,
                                                    HSI_sensor_path=HSI_sensor_path,
                                                    RGB_sensor_path=RGB_sensor_path,                                                   
                                                    site=site,
@@ -92,7 +94,9 @@ class AttentionModel():
                                                    number_of_sites=self.sites,
                                                    classes=self.classes,
                                                    chunk_size=chunk_size,
-                                                   extend_box=self.extend_HSI_box,
+                                                   extend_HSI_box=self.config["train"]["HSI"]["extend_box"],
+                                                   extend_RGB_box=self.config["train"]["RGB"]["extend_box"],
+                                                   label_column=label_column,
                                                    shuffle=True)
 
         return created_records
@@ -175,6 +179,7 @@ class AttentionModel():
                 labels=labels,
                 ids=ids,
                 submodel=submodel,
+                augmentation=self.config["train"]["augment"],
                 cores=self.config["cpu_workers"])
 
             #Create testing tf.data
@@ -189,6 +194,7 @@ class AttentionModel():
                 ids=ids,
                 submodel=submodel,      
                 augmentation=False,
+                cache=True,
                 cores=self.config["cpu_workers"])
             
             self.val_split_with_ids = boxes.tf_dataset(
@@ -201,7 +207,8 @@ class AttentionModel():
                 labels=labels,
                 ids=True,
                 submodel=submodel,     
-                augmentation=False,                
+                augmentation=False,     
+                cache=True,
                 cores=self.config["cpu_workers"])                  
         else:
             #Create training tf.data
@@ -214,6 +221,7 @@ class AttentionModel():
                 metadata=metadata,
                 labels=labels,
                 ids=ids,
+                augmentation=self.config["train"]["augment"],                
                 submodel=submodel,                
                 cores=self.config["cpu_workers"])
 
