@@ -368,8 +368,8 @@ def _parse_(tfrecord):
     features["RGB_image/depth"] = tf.io.FixedLenFeature([], tf.int64)             
     
     example = tf.io.parse_single_example(tfrecord, features)
-    classes = tf.cast(example['classes'], tf.int32)    
-    one_hot_labels = tf.one_hot(example['label'], classes)
+    #classes = tf.cast(example['classes'], tf.int32)    
+    #one_hot_labels = tf.one_hot(example['label'], classes)
     
     # Load HSI image from file
     HSI_image_shape = tf.stack([example['HSI_image/height'],example['HSI_image/width'], example['HSI_image/depth']])
@@ -390,7 +390,7 @@ def _parse_(tfrecord):
     one_hot_sites = tf.one_hot(site, sites)
     
     
-    return (loaded_HSI_image, loaded_RGB_image, example['height'], example['elevation'], one_hot_sites), one_hot_labels
+    return (loaded_HSI_image, loaded_RGB_image, example['height'], example['elevation'], one_hot_sites)
 
 
 def _HSI_parse_(tfrecord):
@@ -625,19 +625,20 @@ def ensemble_dataset(tfrecords,
         dataset: a tf.data dataset yielding crops and labels for train: True, crops and raster indices for train: False
         """
     dataset = tf.data.TFRecordDataset(tfrecords, num_parallel_reads=32)   
-    dataset = dataset.map(_parse_, num_parallel_calls=32)   
-    if labels:
-        label_dataset = dataset.map(_label_parse_)
-        dataset = tf.data.Dataset.zip(dataset, label_dataset)        
+    data_dataset = dataset.map(_parse_, num_parallel_calls=32)         
     if ids:
         id_dataset = dataset.map(_box_index_parse_)
-        dataset = tf.data.Dataset.zip(dataset, id_dataset)        
+        dataset = tf.data.Dataset.zip((dataset, id_dataset))       
     
-    dataset = dataset.map(ensemble_augment, num_parallel_calls=32)         
+    if labels:
+        label_dataset = dataset.map(_label_parse_)
+        full_dataset = tf.data.Dataset.zip((data_dataset, label_dataset))      
+    
+    full_dataset = full_dataset.map(ensemble_augment, num_parallel_calls=32)         
     
     #batch and shuffle
-    dataset = dataset.batch(batch_size=batch_size) 
-    dataset = dataset.shuffle(buffer_size=10)       
-    dataset = dataset.prefetch(buffer_size=1)    
+    full_dataset = full_dataset.batch(batch_size=batch_size) 
+    full_dataset = full_dataset.shuffle(buffer_size=10)       
+    full_dataset = full_dataset.prefetch(buffer_size=1)    
 
-    return dataset
+    return data_dataset
