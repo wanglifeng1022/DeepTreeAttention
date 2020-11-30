@@ -180,7 +180,7 @@ class ImageCallback(Callback):
             counter += 1
 
 
-def create(experiment, train_data, validation_data, train_shp, validation_data_with_index, log_dir=None, label_names=None, submodel=False):
+def create(experiment, train_data, validation_data, train_shp, log_dir=None, label_names=None, submodel=False):
     """Create a set of callbacks
     Args:
         experiment: a comet experiment object
@@ -194,7 +194,8 @@ def create(experiment, train_data, validation_data, train_shp, validation_data_w
     reduce_lr = ReduceLROnPlateau(monitor='val_loss',
                                   factor=0.5,
                                   patience=10,
-                                  min_delta=0.05,
+                                  min_delta=0.1,
+                                  min_lr=0.00001,
                                   verbose=1)
     callback_list.append(reduce_lr)
 

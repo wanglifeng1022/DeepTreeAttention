@@ -552,8 +552,6 @@ def tf_dataset(tfrecords,
         
     if RGB:
         RGB_dataset = dataset.map(_RGB_parse_, num_parallel_calls=cores) 
-        if augmentation:
-            RGB_dataset = RGB_dataset.map(augment, num_parallel_calls=cores)    
         inputs.append(RGB_dataset)    
         
     if metadata:        
@@ -594,6 +592,14 @@ def tf_dataset(tfrecords,
     
     return zipped_dataset
 
+def ensemble_augment(data, label):
+    HSI, RGB, height, elevation, site = data
+    HSI = augment(HSI)
+    
+    data = HSI, RGB, height, elevation, site
+    
+    return data, label
+    
 def ensemble_dataset(tfrecords,
                      batch_size=2,
                shuffle=True,
@@ -604,7 +610,7 @@ def ensemble_dataset(tfrecords,
                metadata=True,
                submodel=False,
                augmentation = True,
-               cores=10):
+               cores=32):
     """Create a tf.data dataset that yields sensor data and ground truth
     Args:
         tfrecords: path to tfrecords, see generate.py
@@ -621,10 +627,10 @@ def ensemble_dataset(tfrecords,
 
     dataset = tf.data.TFRecordDataset(tfrecords, num_parallel_reads=32)   
     dataset = dataset.map(_parse_, num_parallel_calls=32)         
+    dataset = dataset.map(ensemble_augment, num_parallel_calls=32)         
 
     #batch and shuffle
-    if shuffle:
-        dataset = dataset.shuffle(buffer_size=10)   
+    dataset = dataset.shuffle(buffer_size=10)   
     dataset = dataset.batch(batch_size=batch_size)    
     dataset = dataset.prefetch(buffer_size=1)    
 
