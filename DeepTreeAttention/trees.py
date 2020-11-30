@@ -364,18 +364,18 @@ class AttentionModel():
             submodel=False,                    
             cores=self.config["cpu_workers"])  
         
-        self.val_split_with_ids = boxes.ensemble_dataset(
-            tfrecords=self.test_records,
-            batch_size=self.config["train"]["batch_size"],                    
-            shuffle=False,
-            RGB=True,
-            HSI=True,
-            metadata=True,
-            labels=True,
-            ids=True,
-            augmentation=False,                    
-            submodel=False,                    
-            cores=self.config["cpu_workers"])        
+        #self.val_split_with_ids = boxes.ensemble_dataset(
+            #tfrecords=self.test_records,
+            #batch_size=self.config["train"]["batch_size"],                    
+            #shuffle=False,
+            #RGB=True,
+            #HSI=True,
+            #metadata=True,
+            #labels=True,
+            #ids=True,
+            #augmentation=False,                    
+            #submodel=False,                    
+            #cores=self.config["cpu_workers"])        
         
         if self.val_split is None:
             print("Cannot run callbacks without validation data, skipping...")
