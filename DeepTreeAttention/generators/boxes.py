@@ -624,14 +624,20 @@ def ensemble_dataset(tfrecords,
     Returns:
         dataset: a tf.data dataset yielding crops and labels for train: True, crops and raster indices for train: False
         """
-
     dataset = tf.data.TFRecordDataset(tfrecords, num_parallel_reads=32)   
-    dataset = dataset.map(_parse_, num_parallel_calls=32)         
+    dataset = dataset.map(_parse_, num_parallel_calls=32)   
+    if labels:
+        label_dataset = dataset.map(_label_parse_)
+        dataset = tf.data.Dataset.zip(dataset, label_dataset)        
+    if ids:
+        id_dataset = dataset.map(_box_index_parse_)
+        dataset = tf.data.Dataset.zip(dataset, id_dataset)        
+    
     dataset = dataset.map(ensemble_augment, num_parallel_calls=32)         
-
+    
     #batch and shuffle
-    #dataset = dataset.shuffle(buffer_size=10)   
-    dataset = dataset.batch(batch_size=batch_size)    
+    dataset = dataset.batch(batch_size=batch_size) 
+    dataset = dataset.shuffle(buffer_size=10)       
     dataset = dataset.prefetch(buffer_size=1)    
 
     return dataset
