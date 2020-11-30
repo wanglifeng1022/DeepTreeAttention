@@ -630,7 +630,7 @@ def ensemble_dataset(tfrecords,
     dataset = dataset.map(ensemble_augment, num_parallel_calls=32)         
 
     #batch and shuffle
-    dataset = dataset.shuffle(buffer_size=10)   
+    #dataset = dataset.shuffle(buffer_size=10)   
     dataset = dataset.batch(batch_size=batch_size)    
     dataset = dataset.prefetch(buffer_size=1)    
 
