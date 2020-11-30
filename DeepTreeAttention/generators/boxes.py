@@ -632,13 +632,13 @@ def ensemble_dataset(tfrecords,
     
     if labels:
         label_dataset = dataset.map(_label_parse_)
-        full_dataset = tf.data.Dataset.zip((data_dataset, label_dataset))      
+        data_dataset = tf.data.Dataset.zip((data_dataset, label_dataset))      
     
-    full_dataset = full_dataset.map(ensemble_augment, num_parallel_calls=32)         
+    data_dataset = data_dataset.map(ensemble_augment, num_parallel_calls=32)         
     
     #batch and shuffle
-    full_dataset = full_dataset.batch(batch_size=batch_size) 
-    full_dataset = full_dataset.shuffle(buffer_size=10)       
-    full_dataset = full_dataset.prefetch(buffer_size=1)    
+    data_dataset = data_dataset.batch(batch_size=batch_size) 
+    data_dataset = data_dataset.shuffle(buffer_size=10)       
+    data_dataset = data_dataset.prefetch(buffer_size=1)    
 
     return data_dataset
