@@ -628,7 +628,7 @@ def ensemble_dataset(tfrecords,
     data_dataset = dataset.map(_parse_, num_parallel_calls=32)         
     if ids:
         id_dataset = dataset.map(_box_index_parse_)
-        dataset = tf.data.Dataset.zip((dataset, id_dataset))       
+        data_dataset = tf.data.Dataset.zip((data_dataset, id_dataset))       
     
     if labels:
         label_dataset = dataset.map(_label_parse_)
