@@ -352,7 +352,6 @@ def _ensemble_parse_(tfrecord):
         "elevation": tf.io.FixedLenFeature([], tf.float32),        
     }
     
-    #TO DO TURN BACK TO STRING PARSE
     features['HSI_image/data'] = tf.io.FixedLenFeature([20*20*369], tf.float32)        
     features["HSI_image/height"] =  tf.io.FixedLenFeature([], tf.int64)
     features["HSI_image/width"] = tf.io.FixedLenFeature([], tf.int64)

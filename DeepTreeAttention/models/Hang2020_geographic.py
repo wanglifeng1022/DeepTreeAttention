@@ -122,3 +122,47 @@ def learned_ensemble(RGB_model, HSI_model, metadata_model, classes, freeze=True)
                            name="ensemble_model")    
     
     return ensemble_model
+
+
+def fuse(rgb, hsi):
+    """Fuse a rgb attention and an hsi attention layer"""
+    fused_spatial = tf.keras.layers.Multiply()([,])  
+    class_pool = layers.MaxPool2D(pool_size)(fused_spatial)
+    class_pool = layers.Flatten(name="spatial_pooling_filters_{}".format(filters))(class_pool)
+    output = layers.Dense(classes,
+                          activation="softmax",
+                          name="spatial_attention_{}".format(label))(class_pool)    
+    
+    return output
+    
+def spatial_ensemble(RGB_model, HSI_model, metadata_model, classes):
+    
+    #Get spatial attention layer from RGB(remove 'RGB' name TODO)
+    rgb_spatial_attention = RGB_model.get_layer("SpatialAttentionConv_3").output
+    
+    #resize to output
+    downsampled_rgb = tf.keras.layers.AveragePooling2D(pool_size=(5,5))(rgb_spatial_attention)
+    
+    #Get the Final spatial and spectral attention CONV layers
+    HSI_spatial_attention = HSI_model.get_layer("SpatialAttentionConv_3").output
+    HSI_spectral_attention = HSI_model.get_layer("SpectralAttentionConv_3").output
+    
+    #Fuse spatial
+    spatial_fused_output = fuse(rgb=downsampled_rgb, hsi=HSI_spatial_attention)
+
+    #Fuse spectral
+    spectral_fused_output = fuse(rgb=downsampled_rgb, hsi=HSI_spectral_attention)
+
+    weighted_fused = WeightedSum()([spatial_fused_output, spectral_fused_output])
+    
+    normalized_metadata = layers.BatchNormalization()(metadata_model.get_layer("last_relu").output)
+    merged_layers = layers.Concatenate(name="submodel_concat")([spatial_fused_output, spectral_fused_output, normalized_metadata])    
+    merged_layers = layers.Dropout(0.7)(merged_layers)
+    ensemble_softmax = layers.Dense(classes,name="ensemble_learn",activation="softmax")(merged_layers)
+    
+    #Take joint inputs    
+    ensemble_model = tf.keras.Model(inputs=HSI_model.inputs+RGB_model.inputs+metadata_model.inputs,
+                                    outputs=ensemble_softmax,
+                           name="ensemble_model")    
+    
+    return ensemble_model

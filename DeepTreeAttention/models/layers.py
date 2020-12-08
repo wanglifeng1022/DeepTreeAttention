@@ -108,7 +108,7 @@ def spectral_attention(filters, classes, x):
                                      activation="sigmoid")(attention_layers)
 
     #Elementwise multiplication of attention with incoming feature map, expand among spatial dimension in 2D
-    attention_layers = layers.Multiply()([x, attention_layers])
+    attention_layers = layers.Multiply(name = "SpectralAttentionConv_{}".format(label))([x, attention_layers])
 
     #Add a classfication branch with max pool based on size of the layer
     if filters == 32:
@@ -165,7 +165,7 @@ def spatial_attention(filters, classes, x):
                                      activation="sigmoid")(attention_layers)
 
     #Elementwise multiplication of attention with incoming feature map, expand among filter dimension in 3D
-    attention_layers = layers.Multiply()([x, attention_layers])
+    attention_layers = layers.Multiply(name="SpatialAttentionConv_{}".format(label))([x, attention_layers])
 
     #Add a classfication branch with max pool based on size of the layer
     if filters == 32:
