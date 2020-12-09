@@ -178,7 +178,7 @@ def test_train_metadata(tfrecords, mod):
     assert "loss" in mod.metadata_model.history.history  
  
 def test_ensemble(tfrecords, mod):    
-    mod.read_data(mode="ensemble")
+    mod.read_data(mode="ensemble", validation_split = True)
     mod.config["train"]["ensemble"]["epochs"] = 1   
     mod.config["train"]["ensemble"]["batch_size"] = 2
     mod.ensemble(experiment=experiment, class_weight=None, train=True)

@@ -202,7 +202,7 @@ def create(experiment, train_data, validation_data, train_shp, log_dir=None, lab
     #Get the true labels since they are not shuffled
     y_true = [ ]
     for data, label in validation_data:
-        if submodel in ["spatial","spectral"]:
+        if submodel in ["spatial","spectral", "ensemble"]:
             label = label[0]
         y_true.append(label)
             
