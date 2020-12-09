@@ -187,7 +187,7 @@ def spatial_attention(filters, classes, x):
 
 def metadata_fusion(class_pooling, metadata_features, classes, label):
     concat_layer = layers.Concatenate()([class_pooling, metadata_features])
-    concat_layer = layers.Dropout(rate=0.5)(concat_layer)
+    concat_layer = layers.Dropout(rate=0.7)(concat_layer)
     output = layers.Dense(classes,
                           activation="softmax",
                           name="metadata_fusion_attention_{}".format(label))(concat_layer)
