@@ -14,11 +14,16 @@ def metadata_data():
     sites = np.zeros(10)
     sites[8] = 1
     sites = np.expand_dims(sites,0)
-    return [elevation, height, sites]
+    
+    domains = np.zeros(10)
+    domains[8] = 1
+    domains = np.expand_dims(domains,0)
+    
+    return [elevation, height, sites, domains]
 
 @pytest.fixture()
 def RGB_image():
-    image = np.zeros((1, 200, 200, 3), dtype=tf.keras.backend.floatx())
+    image = np.zeros((1, 100, 100, 3), dtype=tf.keras.backend.floatx())
     return image
 
 @pytest.fixture()
@@ -44,8 +49,8 @@ def test_ensemble(RGB_image, HSI_image, metadata_data):
     sensor_inputs, sensor_outputs, spatial, spectral = Hang.define_model(classes=2, height=height, width=width, channels=channels)    
     model2 = tf.keras.Model(inputs=sensor_inputs, outputs=sensor_outputs)    
     
-    metadata_model = metadata.create(classes=2, sites=10, learning_rate=0.001)
-    ensemble = Hang.learned_ensemble(HSI_model=model1, RGB_model=model2, metadata_model=metadata_model, classes=2)
+    metadata_model = metadata.create(classes=2, sites=10, domains=10, learning_rate=0.001)
+    ensemble = Hang.spatial_ensemble(HSI_model=model1, RGB_model=model2, metadata_model=metadata_model, classes=2)
     prediction = ensemble.predict([HSI_image, RGB_image] + metadata_data)
     assert prediction.shape == (1, 2)
         

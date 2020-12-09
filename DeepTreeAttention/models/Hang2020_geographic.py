@@ -124,34 +124,40 @@ def learned_ensemble(RGB_model, HSI_model, metadata_model, classes, freeze=True)
     return ensemble_model
 
 
-def fuse(rgb, hsi):
+def fuse(rgb, hsi, classes):
     """Fuse a rgb attention and an hsi attention layer"""
-    fused_spatial = tf.keras.layers.Multiply()([,])  
-    class_pool = layers.MaxPool2D(pool_size)(fused_spatial)
-    class_pool = layers.Flatten(name="spatial_pooling_filters_{}".format(filters))(class_pool)
+    fused_spatial = tf.keras.layers.Multiply()([rgb,hsi])  
+    class_pool = layers.MaxPool2D((1, 1))(fused_spatial)
+    class_pool = layers.Flatten()(class_pool)
     output = layers.Dense(classes,
-                          activation="softmax",
-                          name="spatial_attention_{}".format(label))(class_pool)    
+                          activation="softmax")(class_pool)    
     
     return output
     
 def spatial_ensemble(RGB_model, HSI_model, metadata_model, classes):
     
+    #unique names
+    for x in RGB_model.layers:
+        x._name = x.name + str("RGB")
+    
+    for x in HSI_model.layers:
+        x._name = x.name + str("HSI")  
+        
     #Get spatial attention layer from RGB(remove 'RGB' name TODO)
-    rgb_spatial_attention = RGB_model.get_layer("SpatialAttentionConv_3").output
+    rgb_spatial_attention = RGB_model.get_layer("SpatialAttentionConv_3RGB").output
     
     #resize to output
     downsampled_rgb = tf.keras.layers.AveragePooling2D(pool_size=(5,5))(rgb_spatial_attention)
     
     #Get the Final spatial and spectral attention CONV layers
-    HSI_spatial_attention = HSI_model.get_layer("SpatialAttentionConv_3").output
-    HSI_spectral_attention = HSI_model.get_layer("SpectralAttentionConv_3").output
+    HSI_spatial_attention = HSI_model.get_layer("SpatialAttentionConv_3HSI").output
+    HSI_spectral_attention = HSI_model.get_layer("SpectralAttentionConv_3HSI").output
     
     #Fuse spatial
-    spatial_fused_output = fuse(rgb=downsampled_rgb, hsi=HSI_spatial_attention)
+    spatial_fused_output = fuse(rgb=downsampled_rgb, hsi=HSI_spatial_attention,classes=classes)
 
     #Fuse spectral
-    spectral_fused_output = fuse(rgb=downsampled_rgb, hsi=HSI_spectral_attention)
+    spectral_fused_output = fuse(rgb=downsampled_rgb, hsi=HSI_spectral_attention, classes=classes)
 
     weighted_fused = WeightedSum()([spatial_fused_output, spectral_fused_output])
     
