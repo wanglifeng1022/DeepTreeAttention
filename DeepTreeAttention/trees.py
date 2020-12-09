@@ -357,7 +357,7 @@ class AttentionModel():
         
         if self.config["train"]["gpus"] > 1:
             with self.strategy.scope():        
-                self.ensemble_model = Hang.spatial_ensemble(HSI_model=self.HSI_model, RGB_model=self.RGB_model, metadata_model= self.metadata_model, freeze=freeze, classes=self.classes)
+                self.ensemble_model = Hang.spatial_ensemble(HSI_model=self.HSI_model, RGB_model=self.RGB_model, metadata_model= self.metadata_model, classes=self.classes)
                 
                 if train:
                     self.ensemble_model.compile(
