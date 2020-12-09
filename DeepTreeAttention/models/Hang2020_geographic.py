@@ -104,10 +104,26 @@ def strip_sensor_softmax(model, classes, index, squeeze=False, squeeze_size=128)
     
     return stripped_model
 
-def learned_ensemble(RGB_model, HSI_model, metadata_model, classes, freeze=True):
-    stripped_HSI_model = strip_sensor_softmax(HSI_model, classes, index = "HSI", squeeze=True, squeeze_size=classes)    
-    stripped_RGB_model = strip_sensor_softmax(RGB_model, classes, index = "RGB", squeeze=True, squeeze_size=classes)      
+def metadata_ensemble(HSI_model, metadata_model, classes):
+    normalized_metadata = layers.BatchNormalization()(metadata_model.get_layer("last_relu").output)
     
+    #for each of the spatial and spectral layers, fuse metadata
+    fused_layers = {}
+    for x in ["spectral","spatial"]:
+        for y in [128]:
+            class_pooling = HSI_model.get_layer("{}_pooling_filters_{}".format(x,y)).output
+            fused_layers["{}_{}".format(x,y)] = metadata_fusion(class_pooling, normalized_metadata, classes, label="{}_{}".format(x,y))
+    
+    ensemble_softmax = WeightedSum(name="weighted_sum")([fused_layers["spatial_128"], fused_layers["spectral_128"]])
+    
+    ensemble_model = tf.keras.Model(inputs=HSI_model.inputs+metadata_model.inputs,
+                                    outputs=ensemble_softmax,
+                           name="ensemble_model")    
+    
+    return ensemble_model
+
+def learned_ensemble(RGB_model, HSI_model, metadata_model, classes):
+    stripped_HSI_model = strip_sensor_softmax(HSI_model, classes, index = "HSI", squeeze=True, squeeze_size=classes)      
     normalized_metadata = layers.BatchNormalization()(metadata_model.get_layer("last_relu").output)
     stripped_metadata = tf.keras.Model(inputs=metadata_model.inputs, outputs = normalized_metadata)
     
@@ -124,17 +140,21 @@ def learned_ensemble(RGB_model, HSI_model, metadata_model, classes, freeze=True)
     return ensemble_model
 
 
-def fuse(rgb, hsi, classes):
+def fuse(rgb, hsi, metadata, classes):
     """Fuse a rgb attention and an hsi attention layer"""
     fused_spatial = tf.keras.layers.Multiply()([rgb,hsi])  
     class_pool = layers.MaxPool2D((1, 1))(fused_spatial)
     class_pool = layers.Flatten()(class_pool)
+    class_pool = metadata_fusion(class_pool, metadata, classes)    
     output = layers.Dense(classes,
                           activation="softmax")(class_pool)    
     
     return output
     
 def spatial_ensemble(RGB_model, HSI_model, metadata_model, classes):
+    
+    #Normalize metadata
+    normalized_metadata = layers.BatchNormalization()(metadata_model.get_layer("last_relu").output)
     
     #unique names
     for x in RGB_model.layers:
@@ -154,21 +174,15 @@ def spatial_ensemble(RGB_model, HSI_model, metadata_model, classes):
     HSI_spectral_attention = HSI_model.get_layer("SpectralAttentionConv_3HSI").output
     
     #Fuse spatial
-    spatial_fused_output = fuse(rgb=downsampled_rgb, hsi=HSI_spatial_attention,classes=classes)
+    spatial_fused_output = fuse(rgb=downsampled_rgb, hsi=HSI_spatial_attention, metadata=normalized_metadata, classes=classes)
 
     #Fuse spectral
-    spectral_fused_output = fuse(rgb=downsampled_rgb, hsi=HSI_spectral_attention, classes=classes)
+    spectral_fused_output = fuse(rgb=downsampled_rgb, hsi=HSI_spectral_attention, metadata=normalized_metadata, classes=classes)
 
-    weighted_fused = WeightedSum()([spatial_fused_output, spectral_fused_output])
-    
-    normalized_metadata = layers.BatchNormalization()(metadata_model.get_layer("last_relu").output)
-    merged_layers = layers.Concatenate(name="submodel_concat")([spatial_fused_output, spectral_fused_output, normalized_metadata])    
-    merged_layers = layers.Dropout(0.7)(merged_layers)
-    ensemble_softmax = layers.Dense(classes,name="ensemble_learn",activation="softmax")(merged_layers)
+    ensemble_softmax = WeightedSum()([spatial_fused_output, spectral_fused_output])
     
     #Take joint inputs    
     ensemble_model = tf.keras.Model(inputs=HSI_model.inputs+RGB_model.inputs+metadata_model.inputs,
-                                    outputs=ensemble_softmax,
-                           name="ensemble_model")    
+                                    outputs=ensemble_softmax,name="ensemble_model")    
     
     return ensemble_model
