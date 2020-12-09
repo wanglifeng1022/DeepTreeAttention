@@ -7,7 +7,7 @@ def define_model(height=11, width=11, channels=48, classes=2, weighted_sum=False
     Create model and return output layers to allow training at different levels
     """
     input_shape = (height, width, channels)
-    sensor_inputs = layers.Input(shape=input_shape, name="data_input")
+    sensor_inputs = layers.Input(shape=input_shape)
     
     #spatial subnetwork and weak attention classifications
     spatial_attention_outputs, spatial_attention_pool = spatial_network(sensor_inputs, classes=classes)
@@ -104,21 +104,39 @@ def strip_sensor_softmax(model, classes, index, squeeze=False, squeeze_size=128)
     
     return stripped_model
 
-def metadata_ensemble(HSI_model, metadata_model, classes):
+def metadata_ensemble(HSI_spectral, HSI_spatial, metadata_model, classes):
     normalized_metadata = layers.BatchNormalization()(metadata_model.get_layer("last_relu").output)
     
     #for each of the spatial and spectral layers, fuse metadata
-    fused_layers = {}
-    for x in ["spectral","spatial"]:
-        for y in [128]:
-            class_pooling = HSI_model.get_layer("{}_pooling_filters_{}".format(x,y)).output
-            fused_layers["{}_{}".format(x,y)] = metadata_fusion(class_pooling, normalized_metadata, classes, label="{}_{}".format(x,y))
     
-    ensemble_softmax = WeightedSum(name="weighted_sum")([fused_layers["spatial_128"], fused_layers["spectral_128"]])
+    spatial_fused_layers = {}
+    for y in [32, 64, 128]:
+        class_pooling = HSI_spatial.get_layer("spatial_pooling_filters_{}".format(y)).output
+        spatial_fused_layers["spatial_{}".format(y)] = metadata_fusion(class_pooling, normalized_metadata, classes, label="spatial_{}".format(y))
+
+    spectral_fused_layers = {}
+    for y in [32, 64, 128]:
+        class_pooling = HSI_spectral.get_layer("spectral_pooling_filters_{}".format(y)).output
+        spectral_fused_layers["spectral_{}".format(y)] = metadata_fusion(class_pooling, normalized_metadata, classes, label="spectral_{}".format(y))
+
+    ensemble_softmax = WeightedSum(name="weighted_sum")([spatial_fused_layers["spatial_128"], spectral_fused_layers["spectral_128"]])
     
-    ensemble_model = tf.keras.Model(inputs=HSI_model.inputs+metadata_model.inputs,
-                                    outputs=ensemble_softmax,
-                           name="ensemble_model")    
+    outputs = [spatial_fused_layers[x] for x in spatial_fused_layers] + [spectral_fused_layers[x] for x in spectral_fused_layers] 
+    outputs.append(ensemble_softmax)
+    
+    #rename inputs to be unique
+    for x in HSI_spatial.layers:
+        x._name = x.name + str("spatial")
+        
+        
+    #rename inputs to be unique
+    for x in HSI_spectral.layers:
+        x._name = x.name + str("spectral")   
+    
+    ensemble_model = tf.keras.Model(
+        inputs=HSI_spatial.inputs + metadata_model.inputs,
+        outputs=outputs,
+        name="ensemble_model")    
     
     return ensemble_model
 
