@@ -86,7 +86,7 @@ class F1Callback(Callback):
         #gather site and species matrix
         y_pred = self.model.predict(self.eval_dataset)
         
-        if self.submodel in ["spectral","spatial"]:
+        if self.submodel in ["spectral","spatial","ensemble"]:
             y_pred = y_pred[0]
         
         #F1
