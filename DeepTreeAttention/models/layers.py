@@ -185,7 +185,13 @@ def spatial_attention(filters, classes, x):
 
     return attention_layers, output, class_pool
 
-
+def metadata_fusion(class_pooling, metadata_features, classes):
+    concat_layer = layers.Concatenate()([class_pooling, metadata_features])
+    concat_layer = layers.Dropout(rate=0.7)(concat_layer)
+    output = layers.Dense(classes,
+                          activation="softmax")(concat_layer)
+    return output
+    
 class WeightedSum(layers.Layer):
     """A custom keras layer to learn a weighted sum of tensors"""
 
