@@ -86,7 +86,7 @@ class F1Callback(Callback):
         #gather site and species matrix
         y_pred = self.model.predict(self.eval_dataset)
         
-        if self.submodel in ["spectral","spatial","ensemble"]:
+        if self.submodel in ["spectral","spatial"]:
             y_pred = y_pred[0]
         
         #F1
@@ -202,7 +202,7 @@ def create(experiment, train_data, validation_data, train_shp, log_dir=None, lab
     #Get the true labels since they are not shuffled
     y_true = [ ]
     for data, label in validation_data:
-        if submodel in ["spatial","spectral", "ensemble"]:
+        if submodel in ["spatial","spectral"]:
             label = label[0]
         y_true.append(label)
             
