@@ -12,13 +12,13 @@ train:
     domain_class_file: /home/b.weinstein/DeepTreeAttention/data/processed/domain_class_labels.csv
     min_height_diff: 10 #minimum height diffs
     checkpoint_dir: #Load RGB and HSI sub models from dir
-    pretraining_dir: #Semi-supervised HSI
+    pretraining_dir: /orange/idtrees-collab/DeepTreeAttention/snapshots//20201208_130721/ #Semi-supervised HSI
     resampled_per_taxa: 50
     HSI:
         sensor_channels: 369
         crop_size: 20
         weighted_sum: True
-        epochs: 100
+        epochs: 70
         extend_box: 0 #expand DeepForest bounding boxes by x meters at edge
     RGB:
         sensor_channels: 3
@@ -27,10 +27,10 @@ train:
         epochs: 70
         extend_box: 3 #expand DeepForest bounding boxes by x meters at edge
     metadata:
-        epochs: 100
+        epochs: 60
     ensemble:
         freeze: False
-        epochs: 120
+        epochs: 80
     tfrecords: /orange/idtrees-collab/DeepTreeAttention/tfrecords/train/
     ground_truth_path: /home/b.weinstein/DeepTreeAttention/data/processed/CHM_filtered_train.shp  #path to ground truth class shapefile   
     learning_rate: .001
