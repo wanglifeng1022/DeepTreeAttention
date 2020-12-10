@@ -375,7 +375,8 @@ def _ensemble_parse_(tfrecord):
     
     # Reshape to known shape
     loaded_RGB_image = tf.reshape(example['RGB_image/data'], RGB_image_shape, name="cast_loaded_RGB_image")
-        
+    loaded_RGB_image = normalize(loaded_RGB_image)
+    
     site = example['site']
     sites = tf.cast(example['number_of_sites'], tf.int32)    
     

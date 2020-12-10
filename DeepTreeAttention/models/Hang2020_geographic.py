@@ -143,8 +143,6 @@ def learned_ensemble(RGB_model, HSI_model, metadata_model, classes):
 def fuse(rgb, hsi, metadata, classes):
     """Fuse a rgb attention and an hsi attention layer"""
     fused_spatial = tf.keras.layers.Multiply()([rgb,hsi])  
-    fused_spatial = tf.keras.layers.Conv2D(1, (1, 1), activation="relu")(fused_spatial)
-    fused_spatial = tf.keras.layers.Add()([hsi, fused_spatial])
     
     class_pool = layers.MaxPool2D((1, 1))(fused_spatial)
     class_pool = layers.Flatten()(class_pool)
