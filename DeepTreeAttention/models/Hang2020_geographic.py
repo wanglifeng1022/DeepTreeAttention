@@ -168,6 +168,7 @@ def spatial_ensemble(RGB_model, HSI_model, metadata_model, classes):
     
     #resize to output
     downsampled_rgb = tf.keras.layers.AveragePooling2D(pool_size=(5,5))(rgb_spatial_attention)
+    downsampled_rgb = tf.keras.layers.BatchNormalization()(downsampled_rgb)
     
     #Get the Final spatial and spectral attention CONV layers
     HSI_spatial_attention = HSI_model.get_layer("SpatialAttentionConv_3HSI").output

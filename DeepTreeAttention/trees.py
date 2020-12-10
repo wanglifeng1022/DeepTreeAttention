@@ -325,7 +325,7 @@ class AttentionModel():
                         callbacks=callback_list,
                         class_weight=class_weight)
         
-    def ensemble(self, experiment, class_weight=None, freeze = True, train=True):
+    def ensemble(self, experiment, class_weight=None, train=True):
         self.classes = pd.read_csv(self.classes_file).shape[0] 
         
         self.read_data(mode="ensemble")      
