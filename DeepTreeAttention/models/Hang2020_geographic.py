@@ -108,21 +108,17 @@ def metadata_ensemble(HSI_spectral, HSI_spatial, metadata_model, classes):
     normalized_metadata = layers.BatchNormalization()(metadata_model.get_layer("last_relu").output)
     
     #for each of the spatial and spectral layers, fuse metadata
-    
     spatial_fused_layers = {}
-    for y in [32, 64, 128]:
+    for y in [128]:
         class_pooling = HSI_spatial.get_layer("spatial_pooling_filters_{}".format(y)).output
         spatial_fused_layers["spatial_{}".format(y)] = metadata_fusion(class_pooling, normalized_metadata, classes, label="spatial_{}".format(y))
 
     spectral_fused_layers = {}
-    for y in [32, 64, 128]:
+    for y in [128]:
         class_pooling = HSI_spectral.get_layer("spectral_pooling_filters_{}".format(y)).output
         spectral_fused_layers["spectral_{}".format(y)] = metadata_fusion(class_pooling, normalized_metadata, classes, label="spectral_{}".format(y))
 
     ensemble_softmax = WeightedSum(name="weighted_sum")([spatial_fused_layers["spatial_128"], spectral_fused_layers["spectral_128"]])
-    
-    outputs = [spatial_fused_layers[x] for x in spatial_fused_layers] + [spectral_fused_layers[x] for x in spectral_fused_layers] 
-    outputs.append(ensemble_softmax)
     
     #rename inputs to be unique
     for x in HSI_spatial.layers:
@@ -135,7 +131,7 @@ def metadata_ensemble(HSI_spectral, HSI_spatial, metadata_model, classes):
     
     ensemble_model = tf.keras.Model(
         inputs=HSI_spatial.inputs + metadata_model.inputs,
-        outputs=outputs,
+        outputs=ensemble_softmax,
         name="ensemble_model")    
     
     return ensemble_model
