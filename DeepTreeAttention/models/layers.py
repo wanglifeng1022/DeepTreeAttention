@@ -189,7 +189,7 @@ def metadata_fusion(class_pooling, metadata_features, classes):
     concat_layer = layers.Concatenate()([class_pooling, metadata_features])
     concat_layer = layers.Dropout(rate=0.7)(concat_layer)
     output = layers.Dense(classes,
-                          activation="softmax")(concat_layer)
+                          activation="relu")(concat_layer)
     return output
     
 class WeightedSum(layers.Layer):
